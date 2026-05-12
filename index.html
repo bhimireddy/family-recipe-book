@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Family Recipe Book</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.7.0/dist/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #fafaf8; --surface: #ffffff; --surface2: #f4f2ed;
+    --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+    --text: #1a1a18; --text2: #6b6b64; --text3: #9e9e96;
+    --accent: #b05e2a; --accent-bg: #fdf0e8; --accent-text: #8c4520;
+    --info-bg: #e8f0fd; --info-text: #1a4fa0;
+    --success-bg: #e8f5ec; --success-text: #1a6b35;
+    --warn-bg: #fdf5e0; --warn-text: #7a5500;
+    --danger-bg: #fdeaea; --danger-text: #8c1f1f;
+    --radius: 10px; --radius-sm: 6px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a18; --surface: #252523; --surface2: #2e2e2b;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.18);
+      --text: #f0f0ea; --text2: #a0a098; --text3: #6a6a62;
+      --accent: #d4845a; --accent-bg: #2e1e12; --accent-text: #e8a07a;
+      --info-bg: #111e38; --info-text: #7aaff0;
+      --success-bg: #0e2218; --success-text: #6abf85;
+      --warn-bg: #261d08; --warn-text: #d4aa50;
+      --danger-bg: #2a0e0e; --danger-text: #e07070;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .app { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+  .top-bar { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.75rem; gap: 12px; flex-wrap: wrap; }
+  .top-bar h1 { font-size: 24px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 10px; }
+  .top-bar .icon { width: 38px; height: 38px; background: var(--accent-bg); border-radius: var(--radius-sm); display: inline-flex; align-items: center; justify-content: center; font-size: 20px; }
+  .top-bar .sub { font-size: 14px; color: var(--text2); margin-top: 4px; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 1.5rem; background: var(--surface2); padding: 4px; border-radius: var(--radius); }
+  .tab { flex: 1; padding: 9px 12px; border-radius: var(--radius-sm); font-size: 14px; cursor: pointer; background: none; border: none; color: var(--text2); font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.15s; }
+  .tab.active { background: var(--surface); color: var(--text); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .tab i { font-size: 16px; }
+  .search-bar input { width: 100%; padding: 10px 14px; font-size: 14px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); color: var(--text); outline: none; font-family: inherit; margin-bottom: 1rem; }
+  .search-bar input:focus { border-color: var(--accent); }
+  .filter-row { display: flex; gap: 8px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+  .chip { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); font-size: 13px; cursor: pointer; background: var(--surface); color: var(--text2); transition: all 0.15s; font-family: inherit; }
+  .chip.active { background: var(--accent-bg); color: var(--accent-text); border-color: var(--accent); font-weight: 500; }
+  .recipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+  .recipe-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem; cursor: pointer; transition: all 0.15s; }
+  .recipe-card:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+  .recipe-card .emoji { font-size: 30px; margin-bottom: 10px; }
+  .recipe-card .name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .recipe-card .meta { font-size: 12px; color: var(--text2); margin-bottom: 8px; }
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+  .badge.daily { background: var(--success-bg); color: var(--success-text); }
+  .badge.weekend { background: var(--info-bg); color: var(--info-text); }
+  .badge.special { background: var(--warn-bg); color: var(--warn-text); }
+  .badge.festival { background: var(--danger-bg); color: var(--danger-text); }
+  .empty-state { grid-column: 1/-1; text-align: center; padding: 3rem 1rem; color: var(--text2); }
+  .empty-state i { font-size: 36px; display: block; margin-bottom: 10px; color: var(--text3); }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1rem; }
+  .panel h2 { font-size: 18px; font-weight: 600; margin-bottom: 1rem; }
+  .detail-back { font-size: 14px; color: var(--text2); cursor: pointer; margin-bottom: 1.25rem; display: inline-flex; align-items: center; gap: 5px; background: none; border: none; font-family: inherit; }
+  .detail-back:hover { color: var(--text); }
+  .detail-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 1.5rem; }
+  .detail-header .big-emoji { font-size: 48px; line-height: 1; }
+  .detail-header h2 { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+  .detail-header .dmeta { font-size: 13px; color: var(--text2); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .section-label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin: 1.5rem 0 0.75rem; }
+  .ingredient-list { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
+  .ingredient-list li { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 5px 11px; font-size: 13px; }
+  .steps-list { list-style: none; counter-reset: steps; }
+  .steps-list li { counter-increment: steps; display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px; line-height: 1.65; }
+  .steps-list li:last-child { border-bottom: none; }
+  .steps-list li::before { content: counter(steps); min-width: 26px; height: 26px; border-radius: 50%; background: var(--accent-bg); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--accent-text); flex-shrink: 0; margin-top: 2px; }
+  .notes-block { background: var(--accent-bg); border-left: 3px solid var(--accent); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 8px 12px; font-size: 13px; color: var(--accent-text); margin-top: 1rem; font-style: italic; }
+  .loading { text-align: center; padding: 3rem; color: var(--text2); }
+  .loading i { font-size: 32px; display: block; margin-bottom: 10px; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error-box { background: var(--danger-bg); border: 1px solid var(--danger-text); border-radius: var(--radius); padding: 1rem 1.25rem; color: var(--danger-text); font-size: 14px; margin-bottom: 1rem; }
+  .error-box a { color: var(--danger-text); }
+  .how-to { background: var(--info-bg); border: 1px solid var(--info-text); border-radius: var(--radius); padding: 1rem 1.25rem; color: var(--info-text); font-size: 14px; margin-bottom: 1rem; line-height: 1.7; }
+  .how-to strong { font-weight: 600; }
+  .how-to ol { padding-left: 1.25rem; margin-top: 0.5rem; }
+  .count-badge { background: var(--accent); color: #fff; border-radius: 10px; font-size: 11px; padding: 1px 7px; font-weight: 600; margin-left: 4px; }
+  .btn { padding: 9px 18px; border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 14px; cursor: pointer; background: var(--surface2); color: var(--text); font-family: inherit; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s; text-decoration: none; }
+  .btn:hover { background: var(--border); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary:hover { opacity: 0.9; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .reminder-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); gap: 12px; }
+  .reminder-item:last-child { border-bottom: none; }
+  .reminder-item .rname { font-size: 15px; font-weight: 500; }
+  .reminder-item .rdetail { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .config-input { width: 100%; padding: 9px 12px; font-size: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; outline: none; margin-top: 6px; }
+  .config-input:focus { border-color: var(--accent); }
+  label.config-label { font-size: 13px; font-weight: 500; color: var(--text2); display: block; margin-top: 1rem; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="top-bar">
+    <div>
+      <h1><span class="icon" aria-hidden="true">📖</span> family recipe book</h1>
+      <div class="sub" id="subtitle">loading recipes...</div>
+    </div>
+    <button class="btn" onclick="reloadData()"><i class="ti ti-refresh"></i> refresh</button>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" onclick="switchTab('browse',this)"><i class="ti ti-grid-dots"></i> browse <span class="count-badge" id="recipe-count">0</span></button>
+    <button class="tab" onclick="switchTab('reminders',this)"><i class="ti ti-bell"></i> reminders</button>
+    <button class="tab" onclick="switchTab('setup',this)"><i class="ti ti-settings"></i> setup</button>
+  </div>
+
+  <div id="view-browse">
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="search recipes, ingredients..." oninput="renderRecipes()" aria-label="search">
+    </div>
+    <div class="filter-row">
+      <button class="chip active" onclick="setFilter('all',this)">all dishes</button>
+      <button class="chip" onclick="setFilter('daily',this)">daily</button>
+      <button class="chip" onclick="setFilter('weekend',this)">weekend</button>
+      <button class="chip" onclick="setFilter('special',this)">special occasion</button>
+      <button class="chip" onclick="setFilter('festival',this)">festival</button>
+    </div>
+    <div id="browse-content"></div>
+  </div>
+
+  <div id="view-detail" style="display:none">
+    <button class="detail-back" onclick="showView('browse')"><i class="ti ti-arrow-left"></i> back to recipes</button>
+    <div class="panel" id="detail-content"></div>
+  </div>
+
+  <div id="view-reminders" style="display:none">
+    <div class="panel">
+      <h2><i class="ti ti-bell" style="vertical-align:-2px;margin-right:6px"></i>cooking reminders</h2>
+      <p style="font-size:14px;color:var(--text2);margin-bottom:1rem">reminders are loaded from the Reminders sheet in your spreadsheet.</p>
+      <div id="reminders-content"></div>
+    </div>
+  </div>
+
+  <div id="view-setup" style="display:none">
+    <div class="panel">
+      <h2><i class="ti ti-settings" style="vertical-align:-2px;margin-right:6px"></i>spreadsheet setup</h2>
+      <div class="how-to">
+        <strong>how to connect your spreadsheet:</strong>
+        <ol>
+          <li>Upload your <code>family-recipe-book.xlsx</code> to your GitHub repository</li>
+          <li>In GitHub, click the file → click <strong>Raw</strong> button → copy that URL</li>
+          <li>Paste the raw URL below and click Save</li>
+          <li>Click Refresh to load your recipes</li>
+        </ol>
+        <div style="margin-top:8px">
+          <strong>Raw URL format looks like:</strong><br>
+          <code style="font-size:12px">https://raw.githubusercontent.com/USERNAME/REPO/main/family-recipe-book.xlsx</code>
+        </div>
+      </div>
+      <label class="config-label">spreadsheet raw URL (from GitHub)</label>
+      <input type="url" class="config-input" id="xlsx-url" placeholder="https://raw.githubusercontent.com/username/repo/main/family-recipe-book.xlsx">
+      <div style="margin-top:1rem" class="btn-row">
+        <button class="btn primary" onclick="saveConfig()"><i class="ti ti-device-floppy"></i> save & load</button>
+        <button class="btn" onclick="testConnection()"><i class="ti ti-plug"></i> test connection</button>
+      </div>
+      <div id="config-status" style="margin-top:1rem;font-size:14px"></div>
+    </div>
+    <div class="panel">
+      <h2><i class="ti ti-file-spreadsheet" style="vertical-align:-2px;margin-right:6px"></i>updating your recipes</h2>
+      <p style="font-size:14px;color:var(--text2);line-height:1.7">
+        To add or edit recipes:<br>
+        1. Open <strong>family-recipe-book.xlsx</strong> on your Mac<br>
+        2. Add a new column for each new recipe<br>
+        3. Go to your GitHub repository<br>
+        4. Click <strong>Add file → Upload files</strong><br>
+        5. Upload the updated spreadsheet (same filename)<br>
+        6. Click <strong>Commit changes</strong><br>
+        7. Come back here and click <strong>Refresh</strong>
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CONFIG_KEY = 'recipe_xlsx_url';
+let recipes = [], reminders = [], activeFilter = 'all';
+
+function init() {
+  const saved = localStorage.getItem(CONFIG_KEY);
+  if (saved) { document.getElementById('xlsx-url').value = saved; loadXLSX(saved); }
+  else showSetupPrompt();
+}
+
+function showSetupPrompt() {
+  document.getElementById('subtitle').textContent = 'connect your spreadsheet to get started';
+  document.getElementById('browse-content').innerHTML = `<div class="how-to"><strong>welcome! let's connect your recipe spreadsheet.</strong><br>Go to the <strong>Setup</strong> tab to paste in your GitHub spreadsheet URL.<br><br><button class="btn primary" onclick="switchTab('setup', document.querySelectorAll('.tab')[2])"><i class="ti ti-settings"></i> go to setup</button></div>`;
+}
+
+async function loadXLSX(url) {
+  document.getElementById('browse-content').innerHTML = '<div class="loading"><i class="ti ti-loader"></i>loading recipes from spreadsheet...</div>';
+  document.getElementById('subtitle').textContent = 'loading...';
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} — check your URL is correct and the file is public`);
+    const buf = await resp.arrayBuffer();
+    parseWorkbook(XLSX.read(buf, { type: 'array' }));
+  } catch (err) {
+    document.getElementById('browse-content').innerHTML = `<div class="error-box"><i class="ti ti-alert-circle" style="vertical-align:-2px;margin-right:6px"></i><strong>could not load spreadsheet:</strong> ${escHtml(err.message)}<br><br>Make sure:<br>• The GitHub repository is <strong>public</strong><br>• You are using the <strong>Raw</strong> URL (starts with raw.githubusercontent.com)<br>• The filename is exactly <strong>family-recipe-book.xlsx</strong></div>`;
+    document.getElementById('subtitle').textContent = 'error loading spreadsheet';
+  }
+}
+
+function parseWorkbook(wb) {
+  recipes = []; reminders = [];
+  const ws = wb.Sheets['Recipes'];
+  if (ws) {
+    const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    let hRow = -1;
+    for (let i = 0; i < data.length; i++) { if (String(data[i][0]).toLowerCase().trim() === 'field') { hRow = i; break; } }
+    if (hRow >= 0) {
+      const fm = {};
+      for (let r = hRow + 1; r < data.length; r++) { const fn = String(data[r][0]).toLowerCase().trim(); if (fn) fm[fn] = r; }
+      for (let col = 1; col < data[hRow].length; col++) {
+        const name = data[fm['name'] || 0]?.[col];
+        if (!name || String(name).trim() === '') continue;
+        recipes.push({
+          id: data[fm['id'] || 0]?.[col] || col,
+          name: String(name).trim(),
+          emoji: String(data[fm['emoji'] || 0]?.[col] || '🍽').trim(),
+          occasion: String(data[fm['occasion'] || 0]?.[col] || 'daily').toLowerCase().trim(),
+          time: String(data[fm['time'] || 0]?.[col] || '').trim(),
+          servings: String(data[fm['servings'] || 0]?.[col] || '').trim(),
+          ingredients: String(data[fm['ingredients'] || 0]?.[col] || '').split(',').map(s => s.trim()).filter(Boolean),
+          steps: String(data[fm['steps'] || 0]?.[col] || '').split('\n').map(s => s.trim()).filter(Boolean),
+          notes: String(data[fm['notes'] || 0]?.[col] || '').trim(),
+          addedBy: String(data[fm['added_by'] || 0]?.[col] || '').trim(),
+        });
+      }
+    }
+  }
+  const ws2 = wb.Sheets['Reminders'];
+  if (ws2) {
+    const data2 = XLSX.utils.sheet_to_json(ws2, { header: 1, defval: '' });
+    let hRow2 = -1;
+    for (let i = 0; i < data2.length; i++) { if (String(data2[i][0]).toLowerCase().trim() === 'field') { hRow2 = i; break; } }
+    if (hRow2 >= 0) {
+      const fm2 = {};
+      for (let r = hRow2 + 1; r < data2.length; r++) { const fn = String(data2[r][0]).toLowerCase().trim(); if (fn) fm2[fn] = r; }
+      for (let col = 1; col < data2[hRow2].length; col++) {
+        const rname = data2[fm2['recipe_name'] || 0]?.[col];
+        if (!rname || String(rname).trim() === '') continue;
+        if (String(data2[fm2['active'] || 0]?.[col] || 'yes').toLowerCase() === 'no') continue;
+        reminders.push({ id: data2[fm2['id'] || 0]?.[col] || col, recipeName: String(rname).trim(), emoji: String(data2[fm2['emoji'] || 0]?.[col] || '🍽').trim(), freq: String(data2[fm2['frequency'] || 0]?.[col] || 'daily').toLowerCase().trim(), email: String(data2[fm2['email'] || 0]?.[col] || '').trim() });
+      }
+    }
+  }
+  document.getElementById('recipe-count').textContent = recipes.length;
+  document.getElementById('subtitle').textContent = `${recipes.length} recipes from your family collection`;
+  renderRecipes(); renderReminders();
+}
+
+function renderRecipes() {
+  const q = (document.getElementById('search-input').value || '').toLowerCase().trim();
+  const container = document.getElementById('browse-content');
+  if (!recipes.length) return;
+  const list = recipes.filter(r => {
+    if (activeFilter !== 'all' && r.occasion !== activeFilter) return false;
+    if (q) return r.name.toLowerCase().includes(q) || r.ingredients.join(' ').toLowerCase().includes(q) || (r.notes || '').toLowerCase().includes(q);
+    return true;
+  });
+  if (!list.length) { container.innerHTML = '<div class="recipe-grid"><div class="empty-state"><i class="ti ti-salad"></i>no recipes match your search</div></div>'; return; }
+  container.innerHTML = `<div class="recipe-grid">${list.map(r => `<div class="recipe-card" onclick="openRecipe('${escAttr(String(r.id))}')" role="button" tabindex="0"><div class="emoji">${r.emoji}</div><div class="name">${escHtml(r.name)}</div><div class="meta">${r.time ? escHtml(r.time) : ''}${r.time && r.servings ? ' · ' : ''}${r.servings ? escHtml(r.servings) : ''}</div><span class="badge ${r.occasion}">${r.occasion}</span>${r.addedBy ? '<div style="font-size:11px;color:var(--text3);margin-top:6px"><i class="ti ti-heart" style="vertical-align:-1px;margin-right:3px"></i>'+escHtml(r.addedBy)+'</div>' : ''}</div>`).join('')}</div>`;
+}
+
+function openRecipe(id) {
+  const r = recipes.find(x => String(x.id) === String(id));
+  if (!r) return;
+  document.getElementById('detail-content').innerHTML = `<div class="detail-header"><div class="big-emoji">${r.emoji}</div><div><h2>${escHtml(r.name)}</h2><div class="dmeta">${r.time ? '<span><i class="ti ti-clock" style="vertical-align:-2px;margin-right:3px"></i>'+escHtml(r.time)+'</span>' : ''}${r.servings ? '<span><i class="ti ti-users" style="vertical-align:-2px;margin-right:3px"></i>'+escHtml(r.servings)+'</span>' : ''}<span class="badge ${r.occasion}">${r.occasion}</span>${r.addedBy ? '<span style="font-size:12px;color:var(--text3)"><i class="ti ti-heart" style="vertical-align:-1px;margin-right:3px"></i>'+escHtml(r.addedBy)+'</span>' : ''}</div></div></div>${r.notes ? '<div class="notes-block"><i class="ti ti-heart" style="vertical-align:-2px;margin-right:4px"></i>'+escHtml(r.notes)+'</div>' : ''}<div class="section-label">ingredients</div><ul class="ingredient-list">${r.ingredients.map(i => '<li>'+escHtml(i)+'</li>').join('')}</ul><div class="section-label">steps to prepare</div><ol class="steps-list">${r.steps.map(s => '<li>'+escHtml(s.replace(/^step\s*\d+[:.]\s*/i,''))+'</li>').join('')}</ol>`;
+  showView('detail');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+}
+
+function renderReminders() {
+  const container = document.getElementById('reminders-content');
+  const fl = { daily:'every day', monday:'every monday', tuesday:'every tuesday', wednesday:'every wednesday', thursday:'every thursday', friday:'every friday', saturday:'every saturday', sunday:'every sunday', special:'special occasions only' };
+  if (!reminders.length) { container.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--text2);font-size:14px"><i class="ti ti-bell-off" style="font-size:28px;display:block;margin-bottom:8px"></i>no active reminders found in your spreadsheet</div>'; return; }
+  container.innerHTML = reminders.map(rm => `<div class="reminder-item"><div><div class="rname">${rm.emoji} ${escHtml(rm.recipeName)}</div><div class="rdetail"><i class="ti ti-clock" style="vertical-align:-2px;margin-right:3px"></i>${fl[rm.freq] || rm.freq} &nbsp;·&nbsp; <i class="ti ti-mail" style="vertical-align:-2px;margin-right:3px"></i>${escHtml(rm.email)}</div></div><span class="badge daily">active</span></div>`).join('');
+}
+
+function setFilter(f, el) { activeFilter = f; document.querySelectorAll('.chip').forEach(c => c.classList.remove('active')); el.classList.add('active'); renderRecipes(); }
+function showView(v) { ['browse','detail','reminders','setup'].forEach(n => { const el = document.getElementById('view-'+n); if (el) el.style.display = n === v ? '' : 'none'; }); }
+function switchTab(v, el) { document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); el.classList.add('active'); showView(v); }
+
+function saveConfig() {
+  const url = document.getElementById('xlsx-url').value.trim();
+  if (!url) { showStatus('please enter a URL', 'error'); return; }
+  localStorage.setItem(CONFIG_KEY, url);
+  showStatus('saved! loading your recipes now...', 'success');
+  loadXLSX(url);
+}
+
+async function testConnection() {
+  const url = document.getElementById('xlsx-url').value.trim();
+  if (!url) { showStatus('enter a URL first', 'error'); return; }
+  showStatus('testing connection...', 'info');
+  try {
+    const resp = await fetch(url);
+    showStatus(resp.ok ? `✓ connection successful (${resp.status}) — click Save & Load to load recipes` : `✗ HTTP ${resp.status} — check the URL`, resp.ok ? 'success' : 'error');
+  } catch (e) { showStatus(`✗ connection failed: ${e.message}`, 'error'); }
+}
+
+function showStatus(msg, type) {
+  const el = document.getElementById('config-status');
+  el.style.color = { success: 'var(--success-text)', error: 'var(--danger-text)', info: 'var(--info-text)' }[type] || 'var(--text)';
+  el.textContent = msg;
+}
+
+function reloadData() { const url = localStorage.getItem(CONFIG_KEY); if (url) loadXLSX(url); else showSetupPrompt(); }
+function escHtml(str) { return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(str) { return String(str || '').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+init();
+</script>
+</body>
+</html>
