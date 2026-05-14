@@ -146,23 +146,18 @@
     <div class="panel">
       <h2><i class="ti ti-settings" style="vertical-align:-2px;margin-right:6px"></i>spreadsheet setup</h2>
       <div class="how-to">
-        <strong>how to connect your spreadsheet:</strong>
-        <ol>
-          <li>Upload your <code>family-recipe-book.xlsx</code> to your GitHub repository</li>
-          <li>In GitHub, click the file → click <strong>Raw</strong> button → copy that URL</li>
-          <li>Paste the raw URL below and click Save</li>
-          <li>Click Refresh to load your recipes</li>
-        </ol>
+        <strong>spreadsheet is loaded automatically from this repository.</strong><br>
+        To use a different spreadsheet, paste its raw GitHub URL below and click Save &amp; Load.
         <div style="margin-top:8px">
-          <strong>Raw URL format looks like:</strong><br>
-          <code style="font-size:12px">https://raw.githubusercontent.com/USERNAME/REPO/main/family-recipe-book.xlsx</code>
+          <strong>Raw URL format:</strong><br>
+          <code style="font-size:12px">https://raw.githubusercontent.com/USERNAME/REPO/main/filename.xlsx</code>
         </div>
       </div>
       <label class="config-label">spreadsheet raw URL (from GitHub)</label>
       <input type="url" class="config-input" id="xlsx-url" placeholder="https://raw.githubusercontent.com/username/repo/main/family-recipe-book.xlsx">
       <div style="margin-top:1rem" class="btn-row">
         <button class="btn primary" onclick="saveConfig()"><i class="ti ti-device-floppy"></i> save & load</button>
-        <button class="btn" onclick="testConnection()"><i class="ti ti-plug"></i> test connection</button>
+        <button class="btn" onclick="resetToDefault()"><i class="ti ti-refresh"></i> reset to default</button>
       </div>
       <div id="config-status" style="margin-top:1rem;font-size:14px"></div>
     </div>
@@ -170,7 +165,7 @@
       <h2><i class="ti ti-file-spreadsheet" style="vertical-align:-2px;margin-right:6px"></i>updating your recipes</h2>
       <p style="font-size:14px;color:var(--text2);line-height:1.7">
         To add or edit recipes:<br>
-        1. Open <strong>family-recipe-book.xlsx</strong> on your Mac<br>
+        1. Open <strong>br-pr-family-recipe-book.xlsx</strong> on your Mac<br>
         2. Add a new column for each new recipe<br>
         3. Go to your GitHub repository<br>
         4. Click <strong>Add file → Upload files</strong><br>
@@ -185,17 +180,13 @@
 
 <script>
 const CONFIG_KEY = 'recipe_xlsx_url';
+const DEFAULT_URL = 'https://raw.githubusercontent.com/bhimireddy/family-recipe-book/main/br-pr-family-recipe-book.xlsx';
 let recipes = [], reminders = [], activeFilter = 'all';
 
 function init() {
-  const saved = localStorage.getItem(CONFIG_KEY);
-  if (saved) { document.getElementById('xlsx-url').value = saved; loadXLSX(saved); }
-  else showSetupPrompt();
-}
-
-function showSetupPrompt() {
-  document.getElementById('subtitle').textContent = 'connect your spreadsheet to get started';
-  document.getElementById('browse-content').innerHTML = `<div class="how-to"><strong>welcome! let's connect your recipe spreadsheet.</strong><br>Go to the <strong>Setup</strong> tab to paste in your GitHub spreadsheet URL.<br><br><button class="btn primary" onclick="switchTab('setup', document.querySelectorAll('.tab')[2])"><i class="ti ti-settings"></i> go to setup</button></div>`;
+  const saved = localStorage.getItem(CONFIG_KEY) || DEFAULT_URL;
+  document.getElementById('xlsx-url').value = saved;
+  loadXLSX(saved);
 }
 
 async function loadXLSX(url) {
@@ -207,7 +198,7 @@ async function loadXLSX(url) {
     const buf = await resp.arrayBuffer();
     parseWorkbook(XLSX.read(buf, { type: 'array' }));
   } catch (err) {
-    document.getElementById('browse-content').innerHTML = `<div class="error-box"><i class="ti ti-alert-circle" style="vertical-align:-2px;margin-right:6px"></i><strong>could not load spreadsheet:</strong> ${escHtml(err.message)}<br><br>Make sure:<br>• The GitHub repository is <strong>public</strong><br>• You are using the <strong>Raw</strong> URL (starts with raw.githubusercontent.com)<br>• The filename is exactly <strong>family-recipe-book.xlsx</strong></div>`;
+    document.getElementById('browse-content').innerHTML = `<div class="error-box"><i class="ti ti-alert-circle" style="vertical-align:-2px;margin-right:6px"></i><strong>could not load spreadsheet:</strong> ${escHtml(err.message)}<br><br>Make sure:<br>• The GitHub repository is <strong>public</strong><br>• You are using the <strong>Raw</strong> URL (starts with raw.githubusercontent.com)<br>• The filename is exactly <strong>br-pr-family-recipe-book.xlsx</strong></div>`;
     document.getElementById('subtitle').textContent = 'error loading spreadsheet';
   }
 }
@@ -271,7 +262,7 @@ function renderRecipes() {
     return true;
   });
   if (!list.length) { container.innerHTML = '<div class="recipe-grid"><div class="empty-state"><i class="ti ti-salad"></i>no recipes match your search</div></div>'; return; }
-  container.innerHTML = `<div class="recipe-grid">${list.map(r => `<div class="recipe-card" onclick="openRecipe('${escAttr(String(r.id))}')" role="button" tabindex="0"><div class="emoji">${r.emoji}</div><div class="name">${escHtml(r.name)}</div><div class="meta">${r.time ? escHtml(r.time) : ''}${r.time && r.servings ? ' · ' : ''}${r.servings ? escHtml(r.servings) : ''}</div><span class="badge ${r.occasion}">${r.occasion}</span>${r.addedBy ? '<div style="font-size:11px;color:var(--text3);margin-top:6px"><i class="ti ti-heart" style="vertical-align:-1px;margin-right:3px"></i>'+escHtml(r.addedBy)+'</div>' : ''}</div>`).join('')}</div>`;
+  container.innerHTML = `<div class="recipe-grid">${list.map(r => `<div class="recipe-card" onclick="openRecipe('${escAttr(String(r.id))}')\" role="button" tabindex="0"><div class="emoji">${r.emoji}</div><div class="name">${escHtml(r.name)}</div><div class="meta">${r.time ? escHtml(r.time) : ''}${r.time && r.servings ? ' · ' : ''}${r.servings ? escHtml(r.servings) : ''}</div><span class="badge ${r.occasion}">${r.occasion}</span>${r.addedBy ? '<div style="font-size:11px;color:var(--text3);margin-top:6px"><i class="ti ti-heart" style="vertical-align:-1px;margin-right:3px"></i>'+escHtml(r.addedBy)+'</div>' : ''}</div>`).join('')}</div>`;
 }
 
 function openRecipe(id) {
@@ -301,14 +292,11 @@ function saveConfig() {
   loadXLSX(url);
 }
 
-async function testConnection() {
-  const url = document.getElementById('xlsx-url').value.trim();
-  if (!url) { showStatus('enter a URL first', 'error'); return; }
-  showStatus('testing connection...', 'info');
-  try {
-    const resp = await fetch(url);
-    showStatus(resp.ok ? `✓ connection successful (${resp.status}) — click Save & Load to load recipes` : `✗ HTTP ${resp.status} — check the URL`, resp.ok ? 'success' : 'error');
-  } catch (e) { showStatus(`✗ connection failed: ${e.message}`, 'error'); }
+function resetToDefault() {
+  localStorage.removeItem(CONFIG_KEY);
+  document.getElementById('xlsx-url').value = DEFAULT_URL;
+  showStatus('reset to default spreadsheet', 'success');
+  loadXLSX(DEFAULT_URL);
 }
 
 function showStatus(msg, type) {
@@ -317,7 +305,7 @@ function showStatus(msg, type) {
   el.textContent = msg;
 }
 
-function reloadData() { const url = localStorage.getItem(CONFIG_KEY); if (url) loadXLSX(url); else showSetupPrompt(); }
+function reloadData() { const url = localStorage.getItem(CONFIG_KEY) || DEFAULT_URL; loadXLSX(url); }
 function escHtml(str) { return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function escAttr(str) { return String(str || '').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
