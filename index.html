@@ -205,7 +205,8 @@ async function loadXLSX(url) {
 
 function parseWorkbook(wb) {
   recipes = []; reminders = [];
-  const ws = wb.Sheets['Recipes'];
+  const wsKey = wb.SheetNames.find(n => n.toLowerCase() === 'recipes') || 'Recipes';
+  const ws = wb.Sheets[wsKey];
   if (ws) {
     const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
     let hRow = -1;
@@ -213,7 +214,8 @@ function parseWorkbook(wb) {
     if (hRow >= 0) {
       const fm = {};
       for (let r = hRow + 1; r < data.length; r++) { const fn = String(data[r][0]).toLowerCase().trim(); if (fn) fm[fn] = r; }
-      for (let col = 1; col < data[hRow].length; col++) {
+      const maxCols = data.reduce((m, row) => Math.max(m, row.length), 0);
+      for (let col = 1; col < maxCols; col++) {
         const name = data[fm['name'] || 0]?.[col];
         if (!name || String(name).trim() === '') continue;
         recipes.push({
@@ -231,7 +233,8 @@ function parseWorkbook(wb) {
       }
     }
   }
-  const ws2 = wb.Sheets['Reminders'];
+  const ws2Key = wb.SheetNames.find(n => n.toLowerCase() === 'reminders') || 'Reminders';
+  const ws2 = wb.Sheets[ws2Key];
   if (ws2) {
     const data2 = XLSX.utils.sheet_to_json(ws2, { header: 1, defval: '' });
     let hRow2 = -1;
@@ -255,13 +258,12 @@ function parseWorkbook(wb) {
 function renderRecipes() {
   const q = (document.getElementById('search-input').value || '').toLowerCase().trim();
   const container = document.getElementById('browse-content');
-  if (!recipes.length) return;
   const list = recipes.filter(r => {
     if (activeFilter !== 'all' && r.occasion !== activeFilter) return false;
     if (q) return r.name.toLowerCase().includes(q) || r.ingredients.join(' ').toLowerCase().includes(q) || (r.notes || '').toLowerCase().includes(q);
     return true;
   });
-  if (!list.length) { container.innerHTML = '<div class="recipe-grid"><div class="empty-state"><i class="ti ti-salad"></i>no recipes match your search</div></div>'; return; }
+  if (!list.length) { container.innerHTML = `<div class="recipe-grid"><div class="empty-state"><i class="ti ti-salad"></i>${recipes.length === 0 ? 'no recipes found in spreadsheet' : 'no recipes match your search'}</div></div>`; return; }
   container.innerHTML = `<div class="recipe-grid">${list.map(r => `<div class="recipe-card" onclick="openRecipe('${escAttr(String(r.id))}')\" role="button" tabindex="0"><div class="emoji">${r.emoji}</div><div class="name">${escHtml(r.name)}</div><div class="meta">${r.time ? escHtml(r.time) : ''}${r.time && r.servings ? ' · ' : ''}${r.servings ? escHtml(r.servings) : ''}</div><span class="badge ${r.occasion}">${r.occasion}</span>${r.addedBy ? '<div style="font-size:11px;color:var(--text3);margin-top:6px"><i class="ti ti-heart" style="vertical-align:-1px;margin-right:3px"></i>'+escHtml(r.addedBy)+'</div>' : ''}</div>`).join('')}</div>`;
 }
 
